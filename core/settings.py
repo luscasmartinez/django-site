@@ -13,12 +13,15 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 import sys
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# base_dir config
+# base_dir confighgh
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'templates')
 STATIC_DIR=os.path.join(BASE_DIR,'static')
+
+
 
 #Encontra o .env do projeto
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -36,8 +39,29 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ 
+		'localhost', 
+		'127.0.0.1',  
+]
 
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    	'X-Register',
+]
+
+# CORS Config
+CORS_ORIGIN_ALLOW_ALL = True  
+# CORS_ORIGIN_ALLOW_ALL como True, o que permite que qualquer site acesse seus recursos.
+# Defina como False e adicione o site no CORS_ORIGIN_WHITELIST onde somente o site da lista acesse os seus recursos.
+
+CORS_ALLOW_CREDENTIALS = False 
+
+CORS_ORIGIN_WHITELIST = ['http://meusite.com',] # Lista.
+
+if not DEBUG:
+	SECURE_SSL_REDIRECT = True
+	ADMINS = [(os.getenv('SUPER_USER'), os.getenv('EMAIL'))]
+	SESSION_COOKIE_SECURE = True
+	CSRF_COOKIE_SECURE = True  
 
 # Application definition
 
@@ -50,10 +74,11 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
 ]
 THIRD_APPS = [
+    "corsheaders",
     
 ]
 PROJECT_APPS = [
-   
+   "apps.base",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_APPS + PROJECT_APPS
@@ -61,11 +86,13 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_APPS + PROJECT_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'requestlogs.middleware.RequestLogsMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -73,7 +100,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'apps/base/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -123,6 +150,34 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK={
+    'EXCEPTION_HANDLER': 'requestlogs.views.exception_handler',
+}
+
+# Logs
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'requestlogs_to_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'info.log',
+        },
+    },
+    'loggers': {
+        'requestlogs': {
+            'handlers': ['requestlogs_to_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+REQUESTLOGS = {
+    'SECRETS': ['password', 'token'],
+    'METHODS': ('PUT', 'PATCH', 'POST', 'DELETE'),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -145,6 +200,8 @@ USE_TZ = True
 
 STATIC_ROOT = os.path.join(BASE_DIR,'static')
 STATIC_URL = '/static/' 
+
+
 
 
 # Default primary key field type
